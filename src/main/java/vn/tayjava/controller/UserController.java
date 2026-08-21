@@ -11,12 +11,13 @@ import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 import vn.tayjava.configuration.Translator;
 import vn.tayjava.dto.request.UserRequestDto;
+import vn.tayjava.dto.response.PageResponse;
 import vn.tayjava.dto.response.ResponseData;
 import vn.tayjava.dto.response.ResponseError;
 import vn.tayjava.dto.response.UserDetailResponse;
+import vn.tayjava.exception.ResourceNotFoundException;
 import vn.tayjava.service.UserService;
-
-import java.util.List;
+import vn.tayjava.util.UserStatus;
 
 @RestController
 @RequestMapping("/users")
@@ -35,53 +36,72 @@ public class UserController {
             long userId = userService.saveUser(user);
             return new ResponseData<>(HttpStatus.CREATED.value(), Translator.toLocale("user.add.success"), userId);
         }catch (Exception e){
-            log.error("Error adding user: {}", e.getMessage(), e.getCause());
+            log.error("errorMessage: {}", e.getMessage(), e.getCause());
             return new ResponseError<>(HttpStatus.BAD_REQUEST.value(), Translator.toLocale("user.add.failure"));
         }
     }
 
     @Operation(summary = "Update an existing user", description = "This endpoint allows you to update an existing user's information.")
     @PutMapping("/{userId}")
-    public ResponseData<?> updateUser(@PathVariable @Min(1) int userId, @Valid @RequestBody UserRequestDto userDto) {
+    public ResponseData<?> updateUser(@PathVariable @Min(1) long userId, @Valid @RequestBody UserRequestDto userDto) {
         log.info("Request update userId={}", userId);
-        return new ResponseData<>(HttpStatus.ACCEPTED.value(), Translator.toLocale("user.update.success"));
+        try {
+            userService.updateUser(userId, userDto);
+            return new ResponseData<>(HttpStatus.ACCEPTED.value(), Translator.toLocale("user.update.success"));
+        }catch (ResourceNotFoundException e){
+            log.error("errorMessage: {}", e.getMessage(), e.getCause());
+            return new ResponseError<>(HttpStatus.BAD_REQUEST.value(), "Update user fail");
+        }
     }
 
     @Operation(summary = "Change the status of an existing user", description = "This endpoint allows you to change the status of an existing user.")
     @PatchMapping("/{userId}")
-    public ResponseData<?> changeStatus(@PathVariable @Min(1) int userId, @RequestParam boolean status) {
+    public ResponseData<?> changeStatus(@PathVariable @Min(1) long userId, @RequestParam UserStatus status) {
         log.info("Request change status, userId={}", userId);
-        return new ResponseData<>(HttpStatus.ACCEPTED.value(), "User status changed");
+        try {
+            userService.changeStatus(userId, status);
+            return new ResponseData<>(HttpStatus.ACCEPTED.value(), "User status changed");
+        }catch (ResourceNotFoundException e){
+            log.error("errorMessage: {}", e.getMessage(), e.getCause());
+            return new ResponseError<>(HttpStatus.BAD_REQUEST.value(), "Change user status fail");
+        }
     }
 
     @Operation(summary = "Delete an existing user", description = "This endpoint allows you to delete an existing user.")
     @DeleteMapping("/{userId}")
-    public ResponseData<?> deleteUser(@Min(value = 1, message = "userId must be greater than 0") @PathVariable int userId) {
+    public ResponseData<?> deleteUser(@Min(value = 1, message = "userId must be greater than 0") @PathVariable long userId) {
         log.info("Request delete userId={}", userId);
-        return new ResponseData<>(HttpStatus.NO_CONTENT.value(), "User deleted");
+        try {
+            userService.deleteUser(userId);
+            return new ResponseData<>(HttpStatus.ACCEPTED.value(), "User deleted");
+        }catch (ResourceNotFoundException e){
+            log.error("errorMessage: {}", e.getMessage(), e.getCause());
+            return new ResponseError<>(HttpStatus.BAD_REQUEST.value(), "Delete user fail");
+        }
     }
 
     @Operation(summary = "Get an existing user", description = "This endpoint allows you to get an existing user's information.")
     @GetMapping("/{userId}")
-    public ResponseData<UserDetailResponse> getUser(@PathVariable @Min(value = 1, message = "userId must be greater than 0") int userId) {
+    public ResponseData<UserDetailResponse> getUser(@PathVariable @Min(value = 1, message = "userId must be greater than 0") long userId) {
         log.info("Request get user detail, userId={}", userId);
         try {
             UserDetailResponse response = userService.getUser(userId);
             return new ResponseData<>(HttpStatus.OK.value(), "User retrieved", response);
-        }catch (Exception e){
-            log.error("Error retrieving user: {}", e.getMessage(), e.getCause());
-            return new ResponseError<>(HttpStatus.NOT_FOUND.value(), Translator.toLocale("user.not.found"));
+        }catch (ResourceNotFoundException e){
+            log.error("errorMessage: {}", e.getMessage(), e.getCause());
+            return new ResponseError<>(HttpStatus.BAD_REQUEST.value(), e.getMessage());
         }
     }
 
     @Operation(summary = "Get all users", description = "This endpoint allows you to get all users' information.")
     @GetMapping("/list")
-    public ResponseData<List<UserRequestDto>> getAllUsers(
+    public ResponseData<PageResponse<?>> getAllUsers(
             @RequestParam(defaultValue = "0", required = false) int pageNo,
-            @Min(10) @RequestParam(defaultValue = "10", required = false) int pageSize
+            @Min(10) @RequestParam(defaultValue = "10", required = false) int pageSize,
+            @RequestParam(required = false) String sortBy
     ) {
         log.info("Request get all users");
-        return new ResponseData<>(HttpStatus.OK.value(), "Users retrieved", List.of(new UserRequestDto("John", "Doe", "1234567890", ""), new UserRequestDto("Jane", "Smith", "0987654321", "")));
+        return new ResponseData<>(HttpStatus.OK.value(), "Users retrieved", userService.getAllUsers(pageNo, pageSize, sortBy));
     }
 
 

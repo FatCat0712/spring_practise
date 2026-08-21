@@ -2,9 +2,14 @@ package vn.tayjava.service.impl;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import vn.tayjava.dto.request.AddressDTO;
 import vn.tayjava.dto.request.UserRequestDto;
+import vn.tayjava.dto.response.PageResponse;
 import vn.tayjava.dto.response.UserDetailResponse;
 import vn.tayjava.exception.ResourceNotFoundException;
 import vn.tayjava.model.Address;
@@ -14,9 +19,12 @@ import vn.tayjava.service.UserService;
 import vn.tayjava.util.UserStatus;
 import vn.tayjava.util.UserType;
 
+import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 @Service
 @Slf4j
@@ -89,6 +97,7 @@ public class UserServiceImpl implements UserService {
     public UserDetailResponse getUser(long userId) {
         User user = getUserById(userId);
         return UserDetailResponse.builder()
+                .id(user.getId())
                 .firstName(user.getFirstName())
                 .lastName(user.getLastName())
                 .email(user.getEmail())
@@ -97,8 +106,42 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
-    public List<UserDetailResponse> getAllUsers(int pageNo, int pageSize) {
-        return List.of();
+    public PageResponse<?> getAllUsers(int pageNo, int pageSize, String... sortBy) {
+        if(pageNo > 0) {
+            pageNo = pageNo - 1;
+        }
+
+        List<Sort.Order> sorts = new ArrayList<>();
+
+        for(String sort : sortBy) {
+            // firstName:asc|desc
+            Pattern pattern = Pattern.compile("^(\\w+?)(:)(asc|desc)$");
+            Matcher matcher = pattern.matcher(sort);
+            if(matcher.find()) {
+                if("asc".equalsIgnoreCase(matcher.group(3))) {
+                    sorts.add(Sort.Order.asc(matcher.group(1)));
+                } else {
+                    sorts.add(Sort.Order.desc(matcher.group(1)));
+                }
+            }
+        }
+
+        Pageable pageable = PageRequest.of(pageNo, pageSize, Sort.by(sorts));
+        Page<User> users = userRepository.findAll(pageable);
+
+        return PageResponse.builder()
+                .pageNo(users.getNumber() + 1)
+                .pageSize(users.getSize())
+                .totalPage(users.getTotalPages())
+                .items(users.stream().map(user -> UserDetailResponse.builder()
+                        .id(user.getId())
+                        .firstName(user.getFirstName())
+                        .lastName(user.getLastName())
+                        .email(user.getEmail())
+                        .phone(user.getPhone())
+                        .build()).toList()
+                )
+                .build();
     }
 
     private Set<Address> convertToAddress(User user, Set<AddressDTO> addresses) {
