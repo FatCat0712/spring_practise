@@ -2,5 +2,5 @@ spring:
   application:
     name: tayjava-sample-code
   profiles:
-#    active: @spring.profiles.active@
-      active: dev
+    active: @spring.profiles.active@
+#      active: dev

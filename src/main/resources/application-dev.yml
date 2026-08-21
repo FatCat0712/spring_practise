@@ -1,12 +1,12 @@
 server:
-  port: 8080
+  port: 80
 spring:
   config:
     activate:
       on-profile: dev
 open:
   api:
-    title: API document
+    title: ${API_TITLE:}
     api-docs: api-service
     version: v1.0.0
     description: Mota API service
