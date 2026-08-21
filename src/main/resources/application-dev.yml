@@ -1,9 +1,20 @@
-server:
-  port: 80
 spring:
   config:
     activate:
       on-profile: dev
+  datasource:
+    url: ${POSTGRES_URL:jdbc:postgresql://localhost:5432/my_db}
+    username: ${POSTGRES_USER:root}
+    password: ${POSTGRES_PASSWORD:Fatcat@712}
+  jpa:
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+        jdbc:
+          time_zone: Asia/Ho_Chi_Minh
+    show-sql: true
+    hibernate:
+      ddl-auto: none
 open:
   api:
     title: ${API_TITLE:}
