@@ -19,6 +19,8 @@ import vn.tayjava.exception.ResourceNotFoundException;
 import vn.tayjava.service.UserService;
 import vn.tayjava.util.UserStatus;
 
+import java.util.List;
+
 @RestController
 @RequestMapping("/users")
 @Validated
@@ -95,13 +97,14 @@ public class UserController {
 
     @Operation(summary = "Get all users", description = "This endpoint allows you to get all users' information.")
     @GetMapping("/list")
-    public ResponseData<PageResponse<?>> getAllUsers(
+    public ResponseData<PageResponse<List<UserDetailResponse>>> getAllUsers(
             @RequestParam(defaultValue = "0", required = false) int pageNo,
             @Min(10) @RequestParam(defaultValue = "10", required = false) int pageSize,
-            @RequestParam(required = false) String sortBy
+            @RequestParam(required = false) String search,
+            @RequestParam(required = false) String ...sortBy
     ) {
         log.info("Request get all users");
-        return new ResponseData<>(HttpStatus.OK.value(), "Users retrieved", userService.getAllUsers(pageNo, pageSize, sortBy));
+        return new ResponseData<>(HttpStatus.OK.value(), "Users retrieved", userService.getAllUsers(pageNo, pageSize, search, sortBy));
     }
 
 

@@ -3,10 +3,9 @@ package vn.tayjava.service.impl;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageRequest;
-import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
+import org.springframework.util.StringUtils;
 import vn.tayjava.dto.request.AddressDTO;
 import vn.tayjava.dto.request.UserRequestDto;
 import vn.tayjava.dto.response.PageResponse;
@@ -14,6 +13,7 @@ import vn.tayjava.dto.response.UserDetailResponse;
 import vn.tayjava.exception.ResourceNotFoundException;
 import vn.tayjava.model.Address;
 import vn.tayjava.model.User;
+import vn.tayjava.repository.SearchRepository;
 import vn.tayjava.repository.UserRepository;
 import vn.tayjava.service.UserService;
 import vn.tayjava.util.UserStatus;
@@ -22,15 +22,24 @@ import vn.tayjava.util.UserType;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
+import java.util.function.Function;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 
 @Service
 @Slf4j
 @RequiredArgsConstructor
 public class UserServiceImpl implements UserService {
+    private static final Pattern SORT_PATTERN = Pattern.compile("^(\\w+?):(asc|desc)$", Pattern.CASE_INSENSITIVE);
+    private static final Set<String> ALLOWED_SORT_FIELDS = Set.of(
+            "id", "firstName", "lastName", "email", "phone"
+    );
+
     private final UserRepository userRepository;
+    private final SearchRepository searchRepository;
 
     @Override
     public long saveUser(UserRequestDto request) {
@@ -106,42 +115,85 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
-    public PageResponse<?> getAllUsers(int pageNo, int pageSize, String... sortBy) {
+    public PageResponse<List<UserDetailResponse>> getAllUsers(int pageNo, int pageSize, String search, String... sortBy) {
         if(pageNo > 0) {
             pageNo = pageNo - 1;
         }
 
-        List<Sort.Order> sorts = new ArrayList<>();
+        Sort sort = buildSort(sortBy);
+        Page<Long> userIds = searchRepository.findUserIds(
+                pageNo,
+                pageSize,
+                normalizeKeyword(search),
+                sort
+        );
+        List<User> users = getUsersForPage(userIds.getContent());
+        List<UserDetailResponse> items = users.stream().map(user -> UserDetailResponse.builder()
+                .id(user.getId())
+                .firstName(user.getFirstName())
+                .lastName(user.getLastName())
+                .email(user.getEmail())
+                .phone(user.getPhone())
+                .build()).toList();
 
-        for(String sort : sortBy) {
-            // firstName:asc|desc
-            Pattern pattern = Pattern.compile("^(\\w+?)(:)(asc|desc)$");
-            Matcher matcher = pattern.matcher(sort);
-            if(matcher.find()) {
-                if("asc".equalsIgnoreCase(matcher.group(3))) {
-                    sorts.add(Sort.Order.asc(matcher.group(1)));
-                } else {
-                    sorts.add(Sort.Order.desc(matcher.group(1)));
+        return PageResponse.<List<UserDetailResponse>>builder()
+                .pageNo(userIds.getNumber() + 1)
+                .pageSize(userIds.getSize())
+                .totalPage(userIds.getTotalPages())
+                .items(items)
+                .build();
+    }
+
+    private Sort buildSort(String... sortBy) {
+        List<Sort.Order> sortOrders = new ArrayList<>();
+        if(sortBy != null) {
+            for(String sort : sortBy) {
+                if(!StringUtils.hasText(sort)) {
+                    continue;
                 }
+
+                Matcher matcher = SORT_PATTERN.matcher(sort.trim());
+                if(!matcher.matches()) {
+                    continue;
+                }
+
+                String field = matcher.group(1);
+                if(!ALLOWED_SORT_FIELDS.contains(field)) {
+                    continue;
+                }
+
+                String direction = matcher.group(2);
+                sortOrders.add("asc".equalsIgnoreCase(direction)
+                        ? Sort.Order.asc(field)
+                        : Sort.Order.desc(field));
             }
         }
 
-        Pageable pageable = PageRequest.of(pageNo, pageSize, Sort.by(sorts));
-        Page<User> users = userRepository.findAll(pageable);
+        boolean hasIdSort = sortOrders.stream()
+                .anyMatch(order -> "id".equalsIgnoreCase(order.getProperty()));
+        if(!hasIdSort) {
+            sortOrders.add(Sort.Order.asc("id"));
+        }
 
-        return PageResponse.builder()
-                .pageNo(users.getNumber() + 1)
-                .pageSize(users.getSize())
-                .totalPage(users.getTotalPages())
-                .items(users.stream().map(user -> UserDetailResponse.builder()
-                        .id(user.getId())
-                        .firstName(user.getFirstName())
-                        .lastName(user.getLastName())
-                        .email(user.getEmail())
-                        .phone(user.getPhone())
-                        .build()).toList()
-                )
-                .build();
+        return Sort.by(sortOrders);
+    }
+
+    private String normalizeKeyword(String search) {
+        return StringUtils.hasText(search) ? search.trim() : null;
+    }
+
+    private List<User> getUsersForPage(List<Long> userIds) {
+        if(userIds.isEmpty()) {
+            return List.of();
+        }
+
+        Map<Long, User> usersById = userRepository.findAllWithAddressesByIdIn(userIds)
+                .stream()
+                .collect(Collectors.toMap(User::getId, Function.identity()));
+
+        return userIds.stream()
+                .map(usersById::get)
+                .toList();
     }
 
     private Set<Address> convertToAddress(User user, Set<AddressDTO> addresses) {

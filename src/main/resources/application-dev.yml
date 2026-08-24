@@ -4,8 +4,12 @@ spring:
       on-profile: dev
   datasource:
     url: ${POSTGRES_URL:jdbc:postgresql://localhost:5432/my_db}
-    username: ${POSTGRES_USER:root}
-    password: ${POSTGRES_PASSWORD:Fatcat@712}
+    username: ${POSTGRES_USER:postgres}
+    password: ${POSTGRES_PASSWORD:postgres}
+#  sql:
+#    init:
+#      mode: always
+#      schema-locations: classpath:initdb.sql
   jpa:
     properties:
       hibernate:
