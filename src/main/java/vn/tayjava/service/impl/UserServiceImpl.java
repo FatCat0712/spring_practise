@@ -218,4 +218,9 @@ public class UserServiceImpl implements UserService {
         return userRepository.findById(userId)
                 .orElseThrow(() -> new ResourceNotFoundException("User not found"));
     }
+
+    @Override
+    public PageResponse<?> advanceSearchByCriteria(int pageNo, int pageSize, String address, String sortBy, String... search) {
+        return searchRepository.advanceSearchUser(pageNo, pageSize, address, sortBy, search);
+    }
 }
