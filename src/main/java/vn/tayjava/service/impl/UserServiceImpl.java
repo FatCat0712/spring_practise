@@ -1,5 +1,6 @@
 package vn.tayjava.service.impl;
 
+import jakarta.mail.MessagingException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
@@ -19,11 +20,13 @@ import vn.tayjava.repository.SearchRepository;
 import vn.tayjava.repository.UserRepository;
 import vn.tayjava.repository.specification.UserSpec;
 import vn.tayjava.repository.specification.UserSpecificationBuilder;
+import vn.tayjava.service.MailService;
 import vn.tayjava.service.UserService;
 import vn.tayjava.util.Gender;
 import vn.tayjava.util.UserStatus;
 import vn.tayjava.util.UserType;
 
+import java.io.UnsupportedEncodingException;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
@@ -45,6 +48,7 @@ public class UserServiceImpl implements UserService {
 
     private final UserRepository userRepository;
     private final SearchRepository searchRepository;
+    private final MailService mailService;
 
     @Override
     public long saveUser(UserRequestDto request) {
@@ -66,8 +70,22 @@ public class UserServiceImpl implements UserService {
 
         user = userRepository.save(user);
 
+        if(user.getId() != null) {
+            // send email confirm here
+            try {
+                mailService.sendConfirmLink(user.getEmail(), user.getId(), "secretCode");
+            } catch (MessagingException | UnsupportedEncodingException e) {
+                log.error("Failed to send confirmation email: {}", e.getMessage());
+            }
+        }
+
         log.info("User saved successfully");
         return user.getId();
+    }
+
+    @Override
+    public void confirmUser(int userId, String secretCode) {
+        log.info("Account confirmed {}", userId);
     }
 
     @Override

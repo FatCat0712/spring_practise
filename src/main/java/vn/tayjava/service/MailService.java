@@ -9,10 +9,14 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.mail.javamail.MimeMessageHelper;
 import org.springframework.stereotype.Service;
-import org.springframework.web.context.annotation.RequestScope;
 import org.springframework.web.multipart.MultipartFile;
+import org.thymeleaf.context.Context;
+import org.thymeleaf.spring6.SpringTemplateEngine;
 
 import java.io.UnsupportedEncodingException;
+import java.nio.charset.StandardCharsets;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Objects;
 
 @Slf4j
@@ -20,6 +24,7 @@ import java.util.Objects;
 @RequiredArgsConstructor
 public class MailService {
     private final JavaMailSender mailSender;
+    private final SpringTemplateEngine templateEngine;
 
     @Value("${spring.mail.from}")
     private String senderEmail;
@@ -50,5 +55,31 @@ public class MailService {
         mailSender.send(message);
         log.info("Email sent successfully to {}", to);
         return "sent";
+    }
+
+    public void sendConfirmLink(String email, Long id, String secretCode) throws MessagingException, UnsupportedEncodingException {
+        log.info("Sending email confirmation account");
+        MimeMessage message = mailSender.createMimeMessage();
+        MimeMessageHelper helper = new MimeMessageHelper(message, true, StandardCharsets.UTF_8.name());
+
+        Context context = new Context();
+        String confirmLink = String.format("http://localhost:8080/users/confirm/%s?secretCode=%s", id, secretCode);
+
+        Map<String, Object> properties = new HashMap<>();
+        properties.put("confirmLink", confirmLink);
+        context.setVariables(properties);
+
+        helper.setFrom(senderEmail, "Eddie");
+        helper.setTo(email);
+        helper.setText("Please confirm your account by clicking the following link: " + confirmLink, true);
+        helper.setSubject("Confirm your account");
+
+        String htmlContent = templateEngine.process("confirm-email.html", context);
+        helper.setText(htmlContent, true);
+
+        mailSender.send(message);
+
+        log.info("Email sent to {}", email);
+
     }
 }

@@ -46,10 +46,10 @@ public interface UserRepository extends JpaRepository<User, Long>, JpaSpecificat
 
     // Less than
     // @Query(value = "select * from User u where u.age < :age")
-    List<User> findByAgeLessThan(int age);
-    List<User> findByAgeLessThanEqual(int age);
-    List<User> findByAgeGreaterThan(int age);
-    List<User> findByAgeGreaterThanEqual(int age);
+//    List<User> findByAgeLessThan(int age);
+//    List<User> findByAgeLessThanEqual(int age);
+//    List<User> findByAgeGreaterThan(int age);
+//    List<User> findByAgeGreaterThanEqual(int age);
 
     // Before vs After
     //  @Query("SELECT u FROM User u WHERE u.createdAt < :date")
@@ -63,7 +63,7 @@ public interface UserRepository extends JpaRepository<User, Long>, JpaSpecificat
 
     // IsNotNull, NotNull
     // @Query("SELECT u FROM User u WHERE u.firstName IS NOT NULL")
-    List<User> findByAgeNotNull();
+//    List<User> findByAgeNotNull();
 
     // Like
     // @Query("SELECT u FROM User u WHERE u.lastName LIKE %:lastName%")
@@ -90,16 +90,16 @@ public interface UserRepository extends JpaRepository<User, Long>, JpaSpecificat
 
      // In
     // @Query("SELECT u FROM User u WHERE u.age IN :ages")
-    List<User> findByAgeIn(Collection<Integer> ages);
-
-    // Not in
-    // @Query("SELECT u FROM User u WHERE u.age NOT IN :ages")
-    List<User> findByAgeNotIn(Collection<Integer> ages);
+//    List<User> findByAgeIn(Collection<Integer> ages);
+//
+//    // Not in
+//    // @Query("SELECT u FROM User u WHERE u.age NOT IN :ages")
+//    List<User> findByAgeNotIn(Collection<Integer> ages);
 
     // True/False
     // @Query("SELECT u FROM User u WHERE u.activated = true")
-    List<User> findByActivatedTrue();
-    List<User> findByActivatedFalse();
+//    List<User> findByActivatedTrue();
+//    List<User> findByActivatedFalse();
 
     // IgnoreCase
     // @Query("SELECT u FROM User u WHERE LOWER(u.lastName) = LOWER(:lastName)")

@@ -19,4 +19,6 @@ public interface UserService {
     PageResponse<?> advanceSearchByCriteria(int pageNo, int pageSize, String sortBy, String address, String... search);
 
     PageResponse<?> advanceSearchWithSpecification(Pageable pageable, String[] user, String... address);
+
+    void confirmUser(@Min(1) int userId, String secretCode);
 }

@@ -2,6 +2,7 @@ package vn.tayjava.controller;
 
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Min;
 import lombok.RequiredArgsConstructor;
@@ -20,6 +21,7 @@ import vn.tayjava.exception.ResourceNotFoundException;
 import vn.tayjava.service.UserService;
 import vn.tayjava.util.UserStatus;
 
+import java.io.IOException;
 import java.util.List;
 
 @RestController
@@ -67,6 +69,21 @@ public class UserController {
         }catch (ResourceNotFoundException e){
             log.error("errorMessage: {}", e.getMessage(), e.getCause());
             return new ResponseError<>(HttpStatus.BAD_REQUEST.value(), "Change user status fail");
+        }
+    }
+
+    @Operation(summary = "Confirm an existing user", description = "This endpoint allows you to confirm an existing user's account.")
+    @GetMapping("/confirm/{userId}")
+    public ResponseData<?> confirmUser(@Min(1) @PathVariable int userId, @RequestParam String secretCode, HttpServletResponse response) throws IOException {
+        log.info("Request confirm userId={}", userId);
+        try {
+            userService.confirmUser(userId, secretCode);
+            return new ResponseData<>(HttpStatus.ACCEPTED.value(), "User confirmed");
+        }catch (ResourceNotFoundException e){
+            log.error("errorMessage: {}", e.getMessage(), e.getCause());
+            return new ResponseError<>(HttpStatus.BAD_REQUEST.value(), "Confirm user fail");
+        }finally {
+//            response.sendRedirect("/users/confirm-success");
         }
     }
 

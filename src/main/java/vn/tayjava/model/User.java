@@ -58,9 +58,9 @@ public class User extends AbstractEntity {
     @Column(name = "status")
     private UserStatus status;
 
-    private Integer age;
-
-    private Boolean activated;
+//    private Integer age;
+//
+//    private Boolean activated;
 
     @JsonIgnore
     @OneToMany(cascade = CascadeType.ALL, mappedBy = "user", fetch = FetchType.EAGER)
