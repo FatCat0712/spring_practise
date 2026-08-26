@@ -3,7 +3,9 @@ package vn.tayjava.service.impl;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 import vn.tayjava.dto.request.AddressDTO;
@@ -15,7 +17,10 @@ import vn.tayjava.model.Address;
 import vn.tayjava.model.User;
 import vn.tayjava.repository.SearchRepository;
 import vn.tayjava.repository.UserRepository;
+import vn.tayjava.repository.specification.UserSpec;
+import vn.tayjava.repository.specification.UserSpecificationBuilder;
 import vn.tayjava.service.UserService;
+import vn.tayjava.util.Gender;
 import vn.tayjava.util.UserStatus;
 import vn.tayjava.util.UserType;
 
@@ -222,5 +227,55 @@ public class UserServiceImpl implements UserService {
     @Override
     public PageResponse<?> advanceSearchByCriteria(int pageNo, int pageSize, String address, String sortBy, String... search) {
         return searchRepository.advanceSearchUser(pageNo, pageSize, address, sortBy, search);
+    }
+
+    @Override
+    public PageResponse<?> advanceSearchWithSpecification(Pageable pageable, String[] user, String... address) {
+        Page<User> users = null;
+        List<User> list = new ArrayList<>();
+        if(user != null && address != null) {
+            // tim kiem tren user va address -> join table
+            return searchRepository.getUserJoinedAddress(pageable, user, address);
+        }else if(user != null) {
+            // tim kiem tren user -> khong can join bang address
+            //  Specification<User> spec = UserSpec.hasFirstName("T");
+            //  Specification<User> genderSpec = UserSpec.notEqualGender(Gender.MALE);
+            //  spec = spec.and(genderSpec);
+
+            UserSpecificationBuilder builder = new UserSpecificationBuilder();
+            for(String s : user) {
+                Pattern pattern = Pattern.compile("(\\w+?)([<:>~!])(.*)(\\p{Punct}?)(\\p{Punct}?)");
+                Matcher matcher = pattern.matcher(s);
+                if(matcher.find()) {
+                    String key = matcher.group(1);
+                    String operation = matcher.group(2);
+                    String value = matcher.group(3);
+                    String prefix = matcher.group(4);
+                    String suffix = matcher.group(5);
+                    builder.with(key, operation, value, prefix, suffix);
+                }
+            }
+
+            list = userRepository.findAll(builder.build());
+
+            return PageResponse.builder()
+                    .pageNo(pageable.getPageNumber())
+                    .pageSize(pageable.getPageSize())
+                    .totalPage(users != null ? users.getTotalPages() : 0)
+                    .totalElements(users != null ? users.getTotalElements() : 0)
+                    .items(list)
+                    .build();
+        }
+        else {
+            users = userRepository.findAll(pageable);
+        }
+
+        return PageResponse.builder()
+                .pageNo(pageable.getPageNumber())
+                .pageSize(pageable.getPageSize())
+                .totalPage(users != null ? users.getTotalPages() : 0)
+                .totalElements(users != null ? users.getTotalElements() : 0)
+                .items(users != null ? users.getContent() : list)
+                .build();
     }
 }

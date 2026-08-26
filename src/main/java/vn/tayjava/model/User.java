@@ -1,5 +1,6 @@
 package vn.tayjava.model;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.JdbcTypeCode;
@@ -57,6 +58,7 @@ public class User extends AbstractEntity {
     @Column(name = "status")
     private UserStatus status;
 
+    @JsonIgnore
     @OneToMany(cascade = CascadeType.ALL, mappedBy = "user", fetch = FetchType.EAGER)
     private Set<Address> addresses = new HashSet<>();
 
