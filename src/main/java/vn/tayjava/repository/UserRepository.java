@@ -32,7 +32,7 @@ public interface UserRepository extends JpaRepository<User, Long>, JpaSpecificat
 
     // -- OR --
     // @Query(value = "SELECT u FROM User u WHERE u.firstName = ?1 OR u.lastName = ?1")
-    List<User> findByFirstNameOrLastName(String name);
+    List<User> findByFirstNameOrLastName(String firstName, String lastName);
 
     // -- Is, Equals --
     // @Query(value = "SELECT u FROM User u WHERE u.firstName = :name")
@@ -47,9 +47,9 @@ public interface UserRepository extends JpaRepository<User, Long>, JpaSpecificat
     // Less than
     // @Query(value = "select * from User u where u.age < :age")
     List<User> findByAgeLessThan(int age);
-    List<User> findByAgeLessThanEquals(int age);
+    List<User> findByAgeLessThanEqual(int age);
     List<User> findByAgeGreaterThan(int age);
-    List<User> findByAgeGreaterThanEquals(int age);
+    List<User> findByAgeGreaterThanEqual(int age);
 
     // Before vs After
     //  @Query("SELECT u FROM User u WHERE u.createdAt < :date")
