@@ -19,6 +19,20 @@ spring:
     show-sql: true
     hibernate:
       ddl-auto: none
+  kafka:
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:29092}
+  mail:
+    host: smtp.gmail.com
+    port: 587
+    username: ${MAIL_USERNAME:}
+    password: ${MAIL_PASSWORD:}
+    from: tdemoch0712@gmail.com
+    properties:
+      mail:
+        smtp:
+          auth: true
+          starttls:
+            enable: true
 open:
   api:
     title: ${API_TITLE:}

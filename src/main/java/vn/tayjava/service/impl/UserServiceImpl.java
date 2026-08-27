@@ -7,6 +7,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.domain.Specification;
+import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 import vn.tayjava.dto.request.AddressDTO;
@@ -48,7 +49,8 @@ public class UserServiceImpl implements UserService {
 
     private final UserRepository userRepository;
     private final SearchRepository searchRepository;
-    private final MailService mailService;
+//    private final MailService mailService;
+    private final KafkaTemplate<String, String> kafkaTemplate;
 
     @Override
     public long saveUser(UserRequestDto request) {
@@ -70,13 +72,28 @@ public class UserServiceImpl implements UserService {
 
         user = userRepository.save(user);
 
+//        if(user.getId() != null) {
+//            // send email confirm here
+//            try {
+//                mailService.sendConfirmLink(user.getEmail(), user.getId(), "secretCode");
+//            } catch (MessagingException | UnsupportedEncodingException e) {
+//                log.error("Failed to send confirmation email: {}", e.getMessage());
+//            }
+//        }
+
         if(user.getId() != null) {
-            // send email confirm here
-            try {
-                mailService.sendConfirmLink(user.getEmail(), user.getId(), "secretCode");
-            } catch (MessagingException | UnsupportedEncodingException e) {
-                log.error("Failed to send confirmation email: {}", e.getMessage());
-            }
+            String message = String.format("email=%s,userId=%d,secretCode=%s", user.getEmail(), user.getId(), "secretCode");
+            kafkaTemplate.send("confirm-account-topic", message)
+                    .whenComplete((result, ex) -> {
+                        if (ex != null) {
+                            log.error("Failed to send message to Kafka: {}", ex.getMessage());
+                        } else {
+                            log.info("Message sent to Kafka topic={}, partition={}, offset={}",
+                                    result.getRecordMetadata().topic(),
+                                    result.getRecordMetadata().partition(),
+                                    result.getRecordMetadata().offset());
+                        }
+                    });
         }
 
         log.info("User saved successfully");
